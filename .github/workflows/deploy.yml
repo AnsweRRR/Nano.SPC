@@ -49,7 +49,7 @@ jobs:
       shell: pwsh
       run: |
         $xml = [Xml] (Get-Content ./Nano.SPC/Nano.SPC.csproj)
-        [string] $version = [Version] $xml.Project.PropertyGroup.ApplicationDisplayVersion
+        [string] $version = [Version] $xml.Project.PropertyGroup[0].ApplicationDisplayVersion
         echo "version=$($version)" >> $env:GITHUB_OUTPUT
 
     - name: Create Tag
