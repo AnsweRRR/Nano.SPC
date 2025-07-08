@@ -5,6 +5,13 @@ VisualStudioVersion = 17.12.35707.178 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nano.SPC", "Nano.SPC\Nano.SPC.csproj", "{9EE37718-3E72-4009-83B1-217210D6DF5C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{CFEEE742-5A47-4AA4-B8A9-19FFB8FC78EF}"
+	ProjectSection(SolutionItems) = preProject
+		Nano.SPC\cert.asc = Nano.SPC\cert.asc
+		Nano.SPC\cert.pfx = Nano.SPC\cert.pfx
+		Nano.SPC\Nano.SPC.appinstaller = Nano.SPC\Nano.SPC.appinstaller
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
