@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
     <AppInstaller
         xmlns="http://schemas.microsoft.com/appx/appinstaller/2018"
-        Version="1.0.0.0" Uri="https://github.com/SingletonSean/maui-tutorials/releases/latest/download/ContinuousDeployment.appinstaller"
+        Version="1.0.0.0" Uri="https://github.com/AnsweRRR/Nano.SPC/releases/latest/download/Nano.SPC.appinstaller"
     >
     <MainPackage
-        Name="NanoworX.BlazorHybridPOC"
-        Publisher="CN=BlazorHybridPOC"
-        Version="1.1.0.0"
+        Name="Nano.SPC"
+        Publisher="CN=NanoworX"
+        Version="1.0.0.0"
         ProcessorArchitecture="x64"
-        Uri="https://github.com/SingletonSean/maui-tutorials/releases/latest/download/AutoUpdate.msix"
+        Uri="https://github.com/AnsweRRR/Nano.SPC/releases/latest/download/AutoUpdate.msix"
     />
     <UpdateSettings>
         <OnLaunch HoursBetweenUpdateChecks="0" />
