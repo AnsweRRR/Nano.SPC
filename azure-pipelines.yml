@@ -20,7 +20,7 @@ steps:
     version: '9.0.x'
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
-- script: dotnet workload install maui
+- script: dotnet workload install maui-windows
   displayName: 'Install MAUI Workload'
 
 - task: DotNetCoreCLI@2
@@ -92,21 +92,23 @@ steps:
     script: |
       $version = "$(AppVersion)"
       $basePath = "$(solutionDir)/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_${version}.0_Test"
-      $msixPath = "$basePath/Nano.SPC_${version}.0_x64.msix"
-      $cerPath = "$basePath/Nano.SPC_${version}.0_x64.cer"
+      $msixPath = Join-Path -Path $basePath -ChildPath "Nano.SPC_${version}.0_x64.msix"
+      $cerPath = Join-Path -Path $basePath -ChildPath "Nano.SPC_${version}.0_x64.cer"
+      $msixTargetPath = Join-Path -Path $basePath -ChildPath "AutoUpdate.msix"
+      $cerTargetPath = Join-Path -Path $basePath -ChildPath "Nano.SPC.cer"
 
       if (Test-Path $msixPath) {
-        Rename-Item $msixPath "$basePath/AutoUpdate.msix"
+          Move-Item -Path $msixPath -Destination $msixTargetPath
       } else {
-        Write-Host "MSIX file not found: $msixPath"
-        Exit 1
+          Write-Host "MSIX file not found: $msixPath"
+          Exit 1
       }
 
       if (Test-Path $cerPath) {
-        Rename-Item $cerPath "$basePath/Nano.SPC.cer"
+          Move-Item -Path $cerPath -Destination $cerTargetPath
       } else {
-        Write-Host "CER file not found: $cerPath"
-        Exit 1
+          Write-Host "CER file not found: $cerPath"
+          Exit 1
       }
 
 - task: PublishBuildArtifacts@1
