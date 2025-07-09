@@ -68,7 +68,21 @@ steps:
     targetType: 'inline'
     script: |
       [xml]$xml = Get-Content "$(solutionDir)/Nano.SPC.csproj"
-      $version = $xml.Project.PropertyGroup.ApplicationDisplayVersion.Trim()
+
+      $version = $null
+      foreach ($pg in $xml.Project.PropertyGroup) {
+          if ($pg.ApplicationDisplayVersion) {
+              $version = $pg.ApplicationDisplayVersion.Trim()
+              break
+          }
+      }
+
+      if (-not $version) {
+          Write-Error "ApplicationDisplayVersion nem található a csproj fájlban."
+          Exit 1
+      }
+
+      Write-Host "Verzió: $version"
       Write-Host "##vso[task.setvariable variable=AppVersion]$version"
 
 - task: PowerShell@2
