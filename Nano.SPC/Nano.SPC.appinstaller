@@ -5,8 +5,8 @@
     >
     <MainPackage
         Name="Nano.SPC"
-        Publisher="CN=NanoworX"
-        Version="1.0.2.0"
+        Publisher="CN=NanoworX, O=NanoworX Kft., C=HU"
+        Version="1.0.0.0"
         ProcessorArchitecture="x64"
         Uri="https://github.com/AnsweRRR/Nano.SPC/releases/latest/download/AutoUpdate.msix"
     />
