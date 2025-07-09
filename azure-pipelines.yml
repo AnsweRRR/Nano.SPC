@@ -1,57 +1,40 @@
 trigger:
   branches:
     include:
-      - master
+      - azure-pipelines
 
 pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/Nano.SPC.csproj'
-  buildPlatform: 'x64'
   buildConfiguration: 'Release'
   targetFramework: 'net9.0-windows10.0.19041.0'
+  solutionDir: 'Nano.SPC'
+  artifactName: 'Nano.SPC_Installer'
 
 steps:
+
 - task: UseDotNet@2
   inputs:
     packageType: 'sdk'
     version: '9.0.x'
-    includePreviewVersions: true
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-- script: |
-    dotnet workload install maui
+- script: dotnet workload install maui
   displayName: 'Install MAUI Workload'
 
-- checkout: self
+- task: DotNetCoreCLI@2
+  displayName: 'Restore'
+  inputs:
+    command: 'restore'
+    projects: '$(solutionDir)'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Restore NuGet packages'
+  displayName: 'Build'
   inputs:
-    command: restore
-    projects: '$(solution)'
-
-- task: DotNetCoreCLI@2
-  displayName: 'Build project'
-  inputs:
-    command: build
-    projects: '$(solution)'
+    command: 'build'
+    projects: '$(solutionDir)'
     arguments: '-c $(buildConfiguration) -f:$(targetFramework)'
-
-# - task: PowerShell@2
-#   displayName: 'Decode Signing Certificate'
-#   inputs:
-#     targetType: 'inline'
-#     script: |
-#       $certBase64 = "$(SIGNING_CERTIFICATE_BASE_64_CONTENT)"
-#       [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($certBase64))
-
-# - task: PowerShell@2
-#   displayName: 'Install Signing Certificate'
-#   inputs:
-#     targetType: 'inline'
-#     script: |
-#       certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx cert.pfx NoRoot
 
 - task: DownloadSecureFile@1
   name: downloadCert
@@ -67,11 +50,10 @@ steps:
       certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx $certPath NoRoot
 
 - task: DotNetCoreCLI@2
-  displayName: 'Publish project'
+  displayName: 'Publish with Appx'
   inputs:
-    command: publish
-    publishWebProjects: false
-    projects: '$(solution)'
+    command: 'publish'
+    projects: '$(solutionDir)'
     arguments: >
       -c $(buildConfiguration)
       -f:$(targetFramework)
@@ -81,12 +63,12 @@ steps:
 
 - task: PowerShell@2
   name: extractVersion
-  displayName: 'Extract Version'
+  displayName: 'Extract ApplicationDisplayVersion'
   inputs:
     targetType: 'inline'
     script: |
-      [xml]$xml = Get-Content "./Nano.SPC/Nano.SPC.csproj"
-      $version = $xml.Project.PropertyGroup.ApplicationDisplayVersion
+      [xml]$xml = Get-Content "$(solutionDir)/Nano.SPC.csproj"
+      $version = $xml.Project.PropertyGroup.ApplicationDisplayVersion.Trim()
       Write-Host "##vso[task.setvariable variable=AppVersion]$version"
 
 - task: PowerShell@2
@@ -95,18 +77,34 @@ steps:
     targetType: 'inline'
     script: |
       $version = "$(AppVersion)"
-      $basePath = "./Nano.SPC/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_${version}.0_Test"
-      Rename-Item "$basePath/Nano.SPC_${version}.0_x64.msix" "AutoUpdate.msix"
-      Rename-Item "$basePath/Nano.SPC_${version}.0_x64.cer" "Nano.SPC.cer"
+      $basePath = "$(solutionDir)/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_${version}.0_Test"
+      $msixPath = "$basePath/Nano.SPC_${version}.0_x64.msix"
+      $cerPath = "$basePath/Nano.SPC_${version}.0_x64.cer"
+
+      if (Test-Path $msixPath) {
+        Rename-Item $msixPath "$basePath/AutoUpdate.msix"
+      } else {
+        Write-Host "MSIX file not found: $msixPath"
+        Exit 1
+      }
+
+      if (Test-Path $cerPath) {
+        Rename-Item $cerPath "$basePath/Nano.SPC.cer"
+      } else {
+        Write-Host "CER file not found: $cerPath"
+        Exit 1
+      }
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifacts'
+  displayName: 'Publish Installer Artifacts'
   inputs:
-    PathtoPublish: '$(System.DefaultWorkingDirectory)/Nano.SPC/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_$(AppVersion).0_Test'
-    ArtifactName: 'app-package'
+    PathtoPublish: '$(solutionDir)/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_$(AppVersion).0_Test'
+    ArtifactName: '$(artifactName)'
+    publishLocation: 'Container'
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish AppInstaller'
+  displayName: 'Publish AppInstaller file'
   inputs:
-    PathtoPublish: '$(System.DefaultWorkingDirectory)/Nano.SPC/Nano.SPC.appinstaller'
-    ArtifactName: 'appinstaller'
+    PathtoPublish: '$(solutionDir)/Nano.SPC.appinstaller'
+    ArtifactName: 'AppInstaller'
+    publishLocation: 'Container'
