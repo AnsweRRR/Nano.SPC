@@ -38,20 +38,33 @@ steps:
     projects: '$(solution)'
     arguments: '-c $(buildConfiguration) -f:$(targetFramework)'
 
-- task: PowerShell@2
-  displayName: 'Decode Signing Certificate'
+# - task: PowerShell@2
+#   displayName: 'Decode Signing Certificate'
+#   inputs:
+#     targetType: 'inline'
+#     script: |
+#       $certBase64 = "$(SIGNING_CERTIFICATE_BASE_64_CONTENT)"
+#       [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($certBase64))
+
+# - task: PowerShell@2
+#   displayName: 'Install Signing Certificate'
+#   inputs:
+#     targetType: 'inline'
+#     script: |
+#       certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx cert.pfx NoRoot
+
+- task: DownloadSecureFile@1
+  name: downloadCert
   inputs:
-    targetType: 'inline'
-    script: |
-      $certBase64 = "$(SIGNING_CERTIFICATE_BASE_64_CONTENT)"
-      [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($certBase64))
+    secureFile: 'cert.pfx'
 
 - task: PowerShell@2
   displayName: 'Install Signing Certificate'
   inputs:
     targetType: 'inline'
     script: |
-      certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx cert.pfx NoRoot
+      $certPath = "$(downloadCert.secureFilePath)"
+      certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx $certPath NoRoot
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish project'
