@@ -1,0 +1,99 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/Nano.SPC.csproj'
+  buildPlatform: 'x64'
+  buildConfiguration: 'Release'
+  targetFramework: 'net9.0-windows10.0.19041.0'
+
+steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '9.0.x'
+    includePreviewVersions: true
+
+- script: |
+    dotnet workload install maui
+  displayName: 'Install MAUI Workload'
+
+- checkout: self
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore NuGet packages'
+  inputs:
+    command: restore
+    projects: '$(solution)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build project'
+  inputs:
+    command: build
+    projects: '$(solution)'
+    arguments: '-c $(buildConfiguration) -f:$(targetFramework)'
+
+- task: PowerShell@2
+  displayName: 'Decode Signing Certificate'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $certBase64 = "$(SIGNING_CERTIFICATE_BASE_64_CONTENT)"
+      [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($certBase64))
+
+- task: PowerShell@2
+  displayName: 'Install Signing Certificate'
+  inputs:
+    targetType: 'inline'
+    script: |
+      certutil -user -p "$(SIGNING_CERTIFICATE_PASSWORD)" -silent -importpfx cert.pfx NoRoot
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish project'
+  inputs:
+    command: publish
+    publishWebProjects: false
+    projects: '$(solution)'
+    arguments: >
+      -c $(buildConfiguration)
+      -f:$(targetFramework)
+      /p:GenerateAppxPackageOnBuild=true
+      /p:AppxPackageSigningEnabled=true
+      /p:PackageCertificateThumbprint=$(SIGNING_CERTIFICATE_THUMBPRINT)
+
+- task: PowerShell@2
+  name: extractVersion
+  displayName: 'Extract Version'
+  inputs:
+    targetType: 'inline'
+    script: |
+      [xml]$xml = Get-Content "./Nano.SPC/Nano.SPC.csproj"
+      $version = $xml.Project.PropertyGroup.ApplicationDisplayVersion
+      Write-Host "##vso[task.setvariable variable=AppVersion]$version"
+
+- task: PowerShell@2
+  displayName: 'Rename Installer and Certificate'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $version = "$(AppVersion)"
+      $basePath = "./Nano.SPC/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_${version}.0_Test"
+      Rename-Item "$basePath/Nano.SPC_${version}.0_x64.msix" "AutoUpdate.msix"
+      Rename-Item "$basePath/Nano.SPC_${version}.0_x64.cer" "Nano.SPC.cer"
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifacts'
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/Nano.SPC/bin/$(buildConfiguration)/$(targetFramework)/win10-x64/AppPackages/Nano.SPC_$(AppVersion).0_Test'
+    ArtifactName: 'app-package'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish AppInstaller'
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/Nano.SPC/Nano.SPC.appinstaller'
+    ArtifactName: 'appinstaller'
